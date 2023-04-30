@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from tqdm import tqdm
 
 
 EPSILON = 1e-5
@@ -56,7 +55,7 @@ class PGDAttack:
         else:
             delta = torch.zeros_like(x, requires_grad=True)
 
-        for i in tqdm(range(self.n)):
+        for _ in range(self.n):
             prediction = self.model(x + delta)
 
             if self.early_stop and classified_correctly(prediction, y, targeted):
@@ -157,12 +156,11 @@ class NESBBoxPGDAttack:
 
         iter_number = self.n
         grad_ema = torch.zeros_like(x)
-        for i in tqdm(range(self.n)):
+        for i in range(self.n):
             with torch.no_grad():
                 prediction = self.model(x + delta)
 
             if self.early_stop and classified_correctly(prediction, y, targeted):
-                print(f'Early stopped at iteration {i} / {self.n}')
                 iter_number = i
                 break
 
@@ -227,7 +225,7 @@ class PGDEnsembleAttack:
         else:
             delta = torch.zeros_like(x, requires_grad=True)
 
-        for _ in tqdm(range(self.n)):
+        for _ in range(self.n):
             predictions = [model(x + delta) for model in self.models]
 
             if self.early_stop and all(classified_correctly(prediction, y, targeted) for prediction in predictions):

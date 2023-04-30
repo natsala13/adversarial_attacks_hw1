@@ -8,8 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import tqdm
-
 sns.set_theme()
 
 torch.manual_seed(consts.SEED)
@@ -38,8 +36,8 @@ layers = {'conv1': model.conv1,
 
 # flip bits at random and measure impact on accuracy (via RAD)
 RADs_bf_idx = dict([(bf_idx, []) for bf_idx in range(32)]) # will contain a list of RADs for each index of bit flipped
-RADs_all = [] # will eventually contain all consts.BF_PER_LAYER*len(layers) RADs
-for layer_name in tqdm.tqdm(layers, desc="layer name", position=0):
+RADs_all = []  # will eventually contain all consts.BF_PER_LAYER*len(layers) RADs
+for layer_name in layers:
     layer = layers[layer_name]
     with torch.no_grad():
         W = layer.weight
@@ -57,13 +55,11 @@ for layer_name in tqdm.tqdm(layers, desc="layer name", position=0):
         sample_indexes = random.sample(indexes, min(len(indexes), consts.BF_PER_LAYER))
 
         # for _ in range(consts.BF_PER_LAYER):
-        for weight_index in tqdm.tqdm(sample_indexes, desc='weights flipped', position=1):
+        for weight_index in sample_indexes:
             # FILL ME: flip a random bit in a randomly picked weight, measure RAD, and restore weight
             original_weight = W[weight_index].detach().clone()
 
-            print(f'original weight - {original_weight}')
             flipped_weight, bit_index = utils.random_bit_flip(W[weight_index])
-            print(f'flipped wieght - {flipped_weight}, bit inde - {bit_index}')
             W[weight_index] = flipped_weight
 
             acc_after_flip = utils.compute_accuracy(model, data_loader, device)
