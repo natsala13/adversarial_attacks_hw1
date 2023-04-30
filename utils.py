@@ -170,14 +170,15 @@ def float32(num):
     return struct.unpack('>f', bytes(num))[0]
 
 
-def random_bit_flip(w):
+def random_bit_flip(w, bit_index=-1):
     """
     This functoin receives a weight in float32 format, picks a
     random bit to flip in it, flips the bit, and returns:
     1- The weight with the bit flipped
     2- The index of the flipped bit in {0, 1, ..., 31}
     """
-    bit_index = random.randint(0, 31)
+    if bit_index == -1:
+        bit_index = random.randint(0, 31)
 
     b = binary(w)
     b[bit_index // 8] ^= 1 << (7 - bit_index % 8)
