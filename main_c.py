@@ -52,7 +52,7 @@ for layer_name in layers:
         elif len(W.shape) == 2:
             n, m = W.shape
             indexes = [(i, j) for i in range(n) for j in range(m)]
-        else
+        else:
             raise NotImplementedError
 
         sample_indexes = random.sample(indexes, consts.BF_PER_LAYER)
