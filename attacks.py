@@ -182,7 +182,7 @@ class NESBBoxPGDAttack:
         assert torch.all(delta >= -self.eps - EPSILON) and torch.all(delta <= self.eps + EPSILON)
         assert torch.all(adversarial >= 0) and torch.all(adversarial <= 1)
 
-        return adversarial, torch.zeros_like(y) + iter_number
+        return adversarial, torch.zeros_like(y) + iter_number * self.k * 2
 
 
 class PGDEnsembleAttack:

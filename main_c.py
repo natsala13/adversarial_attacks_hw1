@@ -42,9 +42,22 @@ for layer_name in layers:
     with torch.no_grad():
         W = layer.weight
         W.requires_grad = False
-        for _ in range(consts.BF_PER_LAYER):
+
+        n, m, p = W.shape
+        indexes = [(i, j, k) for i in range(n) for j in range(m) for k in range(p)]
+        sample_indexes = random.sample(indexes, consts.BF_PER_LAYER)
+
+        # for _ in range(consts.BF_PER_LAYER):
+        for weight_index in sample_indexes:
             # FILL ME: flip a random bit in a randomly picked weight, measure RAD, and restore weight
-            RADs_bf_idx[bf_idx].append(rad)
+            original_weight = W[weight_index]
+            flipped_weight, bit_index = utils.random_bit_flip(W[weight_index])
+            W[weight_index] = flipped_weight
+            acc_after_flip = utils.compute_accuracy(model, data_loader, device)
+            rad = (acc_orig - acc_after_flip) / acc_orig
+            W[weight_index] = original_weight
+
+            RADs_bf_idx[bit_index].append(rad)
             RADs_all.append(rad)
 
 # Max and % RAD>10%
