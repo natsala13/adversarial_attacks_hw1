@@ -122,16 +122,20 @@ class NESBBoxPGDAttack:
         self.loss_func = nn.CrossEntropyLoss(reduction='none')
 
     def estimate_gradient(self, x, y, targeted):
-        mu = 2 * torch.rand_like(x, requires_grad=False) - 1
-        x_plus = torch.clamp(x + self.sigma * mu, 0, 1)
-        x_minus = torch.clamp(x - self.sigma * mu, 0, 1)
+        grad = torch.zeros_like(x, requires_grad=False)
 
-        with torch.no_grad():
-            diff = self.loss_func(self.model(x_plus), y) - self.loss_func(self.model(x_minus), y)
+        for _ in range(self.k):
+            mu = 2 * torch.rand_like(x, requires_grad=False) - 1
+            x_plus = torch.clamp(x + self.sigma * mu, 0, 1)
+            x_minus = torch.clamp(x - self.sigma * mu, 0, 1)
 
-        grad = diff.view(len(diff), 1, 1, 1) * mu / self.sigma
-        grad = grad / torch.norm(grad)
+            with torch.no_grad():
+                diff = self.loss_func(self.model(x_plus), y) - self.loss_func(self.model(x_minus), y)
 
+            grad += diff.view(len(diff), 1, 1, 1) * mu  # / self.sigma
+            # grad = grad / torch.norm(grad)
+
+        grad /= (2 * self.k * self.sigma)
         grad = -1 * grad if targeted else grad
 
         return grad

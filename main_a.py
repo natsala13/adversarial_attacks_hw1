@@ -54,8 +54,8 @@ for momentum in [0, 0.9]:
         bb_attack.momentum = momentum
         x_adv, y, n_queries = run_blackbox_attack(bb_attack, data_loader, targeted, device)
 
-        np.save('debug/x_adversarial.npy', x_adv.detach().numpy())
-        np.save('debug/labels.npy', y.detach().numpy())
+        # np.save('debug/x_adversarial.npy', x_adv.detach().numpy())
+        # np.save('debug/labels.npy', y.detach().numpy())
 
         sr = compute_attack_success(model, x_adv, y, consts.BATCH_SIZE, targeted, device)
         median_queries = torch.median(n_queries)
@@ -69,7 +69,7 @@ for momentum in [0, 0.9]:
 
 # box-plot # queries wo/ and w/ momentum for untargeted attacks
 plt.figure()
-plt.boxplot([n_queries_all[0], n_queries_all[2]])
+plt.boxplot([n_queries_all[0].detach().cpu(), n_queries_all[2].detach().cpu()])
 plt.xticks(range(1, 3),
            ['0.0', '0.9'])
 plt.title('untargeted')
@@ -79,7 +79,7 @@ plt.savefig('bbox-n_queries_untargeted.jpg')
 
 # box-plot # queries wo/ and w/ momentum for targeted attacks
 plt.figure()
-plt.boxplot([n_queries_all[1], n_queries_all[3]])
+plt.boxplot([n_queries_all[1].detach().cpu(), n_queries_all[3].detach().cpu()])
 plt.xticks(range(1, 3),
            ['0.0', '0.9'])
 plt.title('targeted')
