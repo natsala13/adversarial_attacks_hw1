@@ -81,5 +81,8 @@ print(f'RAD>10%: {np.sum(RADs_all>0.1)/RADs_all.size:0.4f}')
             
 # boxplots: bit-flip index vs. RAD
 plt.figure()
-# FILL ME
+plt.boxplot(list(RADs_bf_idx.values()))
+plt.title('values of all bit flips')
+plt.xlabel('bit index')
+plt.ylabel('RAD')
 plt.savefig('bf_idx-vs-RAD.jpg')

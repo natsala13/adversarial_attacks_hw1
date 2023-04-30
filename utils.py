@@ -180,6 +180,6 @@ def random_bit_flip(w):
     bit_index = random.randint(0, 31)
 
     b = binary(w)
-    b[bit_index // 8] ^= 1 << (bit_index % 8)
+    b[bit_index // 8] ^= 1 << (7 - bit_index % 8)
 
     return float32(b), bit_index
