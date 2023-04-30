@@ -1,6 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
+
+
+EPSILON = 1e-5
+
+
+def classified_correctly(output: torch.tensor, y: torch.tensor, targeted: bool):
+    prediction = torch.argmax(output, dim=1)
+    correct = prediction == y if targeted else prediction != y
+
+    return correct.all()
+
 
 class PGDAttack:
     """
@@ -38,7 +50,38 @@ class PGDAttack:
         performs random initialization and early stopping, depending on the 
         self.rand_init and self.early_stop flags.
         """
-        pass # FILL ME
+        if self.rand_init:
+            delta = torch.rand_like(x, requires_grad=True)
+            delta = (2 * delta - 1) * self.eps  # change noise to be in [-eps, eps]
+        else:
+            delta = torch.zeros_like(x, requires_grad=True)
+
+        for i in tqdm(range(self.n)):
+            prediction = self.model(x + delta)
+
+            if self.early_stop and classified_correctly(prediction, y, targeted):
+                print(f'Early stopped at iteration {i} / {self.n}')
+                break
+
+            loss = torch.nn.functional.cross_entropy(prediction, y)
+            loss = -1 * loss if targeted else loss
+
+            grad = torch.autograd.grad(loss, delta)[0]
+
+            delta += (self.alpha * torch.sign(grad))
+
+            delta = torch.clamp(delta, -self.eps, self.eps)  # Make sure the perturbation is still at e magnitude
+            delta = torch.clamp(x + delta, 0, 1) - x  # make sure the image is still a valid image
+
+            assert torch.all(delta >= -self.eps - EPSILON) and torch.all(delta <= self.eps + EPSILON)
+            assert torch.all(x + delta >= 0) and torch.all(x + delta <= 1)
+
+        adversarial = x + delta
+
+        assert torch.all(delta >= -self.eps - EPSILON) and torch.all(delta <= self.eps + EPSILON)
+        assert torch.all(adversarial >= 0) and torch.all(adversarial <= 1)
+
+        return adversarial
 
 
 class NESBBoxPGDAttack:
@@ -78,6 +121,19 @@ class NESBBoxPGDAttack:
         self.early_stop = early_stop
         self.loss_func = nn.CrossEntropyLoss(reduction='none')
 
+    def estimate_gradient(self, x, y, targeted):
+        mu = 2 * torch.rand_like(x, requires_grad=False) - 1
+        x_plus = torch.clamp(x + self.sigma * mu, 0, 1)
+        x_minus = torch.clamp(x - self.sigma * mu, 0, 1)
+
+        diff = self.loss_func(self.model(x_plus), y) - self.loss_func(self.model(x_minus), y)
+        grad = diff.view(len(diff), 1, 1, 1) * mu / self.sigma
+        grad = grad / torch.norm(grad)
+
+        grad = -1 * grad if targeted else grad
+
+        return grad
+
     def execute(self, x, y, targeted=False):
         """
         Executes the attack on a batch of samples x. y contains the true labels 
@@ -88,7 +144,39 @@ class NESBBoxPGDAttack:
         2- A vector with dimensionality len(x) containing the number of queries for
             each sample in x.
         """
-        pass # FILL ME
+        if self.rand_init:
+            delta = torch.rand_like(x, requires_grad=False)
+            delta = (2 * delta - 1) * self.eps  # change noise to be in [-eps, eps]
+        else:
+            delta = torch.zeros_like(x, requires_grad=False)
+
+        iter_number = self.n
+        grad_ema = torch.zeros_like(x)
+        for i in tqdm(range(self.n)):
+            prediction = self.model(x + delta)
+
+            if self.early_stop and classified_correctly(prediction, y, targeted):
+                print(f'Early stopped at iteration {i} / {self.n}')
+                iter_number = i
+                break
+
+            grad = self.estimate_gradient(x + delta, y, targeted)
+            grad_ema = self.momentum * grad_ema + (1 - self.momentum) * grad
+
+            delta += (self.alpha * torch.sign(grad_ema))
+
+            delta = torch.clamp(delta, -self.eps, self.eps)  # Make sure the perturbation is still at e magnitude
+            delta = torch.clamp(x + delta, 0, 1) - x  # make sure the image is still a valid image
+
+            assert torch.all(delta >= -self.eps - EPSILON) and torch.all(delta <= self.eps + EPSILON)
+            assert torch.all(x + delta >= 0) and torch.all(x + delta <= 1)
+
+        adversarial = x + delta
+
+        assert torch.all(delta >= -self.eps - EPSILON) and torch.all(delta <= self.eps + EPSILON)
+        assert torch.all(adversarial >= 0) and torch.all(adversarial <= 1)
+
+        return adversarial, torch.zeros_like(y) + iter_number
 
 
 class PGDEnsembleAttack:
