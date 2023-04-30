@@ -126,7 +126,9 @@ class NESBBoxPGDAttack:
         x_plus = torch.clamp(x + self.sigma * mu, 0, 1)
         x_minus = torch.clamp(x - self.sigma * mu, 0, 1)
 
-        diff = self.loss_func(self.model(x_plus), y) - self.loss_func(self.model(x_minus), y)
+        with torch.no_grad():
+            diff = self.loss_func(self.model(x_plus), y) - self.loss_func(self.model(x_minus), y)
+
         grad = diff.view(len(diff), 1, 1, 1) * mu / self.sigma
         grad = grad / torch.norm(grad)
 
@@ -153,7 +155,8 @@ class NESBBoxPGDAttack:
         iter_number = self.n
         grad_ema = torch.zeros_like(x)
         for i in tqdm(range(self.n)):
-            prediction = self.model(x + delta)
+            with torch.no_grad():
+                prediction = self.model(x + delta)
 
             if self.early_stop and classified_correctly(prediction, y, targeted):
                 print(f'Early stopped at iteration {i} / {self.n}')

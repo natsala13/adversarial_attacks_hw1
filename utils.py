@@ -139,7 +139,8 @@ def compute_attack_success(model, x_adv, y, batch_size, targeted, device):
     num_correct = 0
 
     for x_batch, y_batch in zip(x_batches, y_batches):
-        predictions = torch.argmax(model(x_batch), dim=1)
+        with torch.no_grad():
+            predictions = torch.argmax(model(x_batch), dim=1)
 
         if targeted:
             correct = predictions == y_batch
