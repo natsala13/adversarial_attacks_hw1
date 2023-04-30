@@ -60,7 +60,6 @@ class PGDAttack:
             prediction = self.model(x + delta)
 
             if self.early_stop and classified_correctly(prediction, y, targeted):
-                print(f'Early stopped at iteration {i} / {self.n}')
                 break
 
             loss = torch.nn.functional.cross_entropy(prediction, y)
@@ -222,4 +221,34 @@ class PGDEnsembleAttack:
         attacks. The method returns the adversarially perturbed samples, which
         lie in the ranges [0, 1] and [x-eps, x+eps].
         """
-        pass # FILL ME
+        if self.rand_init:
+            delta = torch.rand_like(x, requires_grad=True)
+            delta = (2 * delta - 1) * self.eps  # change noise to be in [-eps, eps]
+        else:
+            delta = torch.zeros_like(x, requires_grad=True)
+
+        for _ in tqdm(range(self.n)):
+            predictions = [model(x + delta) for model in self.models]
+
+            if self.early_stop and all(classified_correctly(prediction, y, targeted) for prediction in predictions):
+                break
+
+            loss = sum(torch.nn.functional.cross_entropy(prediction, y) for prediction in predictions)
+            loss = -1 * loss if targeted else loss
+
+            grad = torch.autograd.grad(loss, delta)[0]
+
+            delta += (self.alpha * torch.sign(grad))
+
+            delta = torch.clamp(delta, -self.eps, self.eps)  # Make sure the perturbation is still at e magnitude
+            delta = torch.clamp(x + delta, 0, 1) - x  # make sure the image is still a valid image
+
+            assert torch.all(delta >= -self.eps - EPSILON) and torch.all(delta <= self.eps + EPSILON)
+            assert torch.all(x + delta >= 0) and torch.all(x + delta <= 1)
+
+        adversarial = x + delta
+
+        assert torch.all(delta >= -self.eps - EPSILON) and torch.all(delta <= self.eps + EPSILON)
+        assert torch.all(adversarial >= 0) and torch.all(adversarial <= 1)
+
+        return adversarial
