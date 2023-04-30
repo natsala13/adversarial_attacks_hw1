@@ -34,6 +34,9 @@ layers = {'conv1': model.conv1,
           'fc2':   model.fc2,
           'fc3':   model.fc3}
 
+for layer_name in layers:
+    print(f'shape of layer {layer_name} - {layers[layer_name].weight.shape}')
+
 # flip bits at random and measure impact on accuracy (via RAD)
 RADs_bf_idx = dict([(bf_idx, []) for bf_idx in range(32)]) # will contain a list of RADs for each index of bit flipped
 RADs_all = [] # will eventually contain all consts.BF_PER_LAYER*len(layers) RADs
@@ -43,8 +46,15 @@ for layer_name in layers:
         W = layer.weight
         W.requires_grad = False
 
-        n, m, p = W.shape
-        indexes = [(i, j, k) for i in range(n) for j in range(m) for k in range(p)]
+        if len(W.shape) == 4:
+            n, m, p, c = W.shape
+            indexes = [(i, j, k, l) for i in range(n) for j in range(m) for k in range(p) for l in range(c)]
+        elif len(W.shape) == 2:
+            n, m = W.shape
+            indexes = [(i, j) for i in range(n) for j in range(m)]
+        else
+            raise NotImplementedError
+
         sample_indexes = random.sample(indexes, consts.BF_PER_LAYER)
 
         # for _ in range(consts.BF_PER_LAYER):
