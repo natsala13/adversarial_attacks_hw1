@@ -59,9 +59,11 @@ for layer_name in tqdm.tqdm(layers, desc="layer name", position=0):
         # for _ in range(consts.BF_PER_LAYER):
         for weight_index in tqdm.tqdm(sample_indexes, desc='weights flipped', position=1):
             # FILL ME: flip a random bit in a randomly picked weight, measure RAD, and restore weight
-            original_weight = W[weight_index]
+            original_weight = W[weight_index].detach().clone()
 
+            print(f'original weight - {original_weight}')
             flipped_weight, bit_index = utils.random_bit_flip(W[weight_index])
+            print(f'flipped wieght - {flipped_weight}, bit inde - {bit_index}')
             W[weight_index] = flipped_weight
 
             acc_after_flip = utils.compute_accuracy(model, data_loader, device)

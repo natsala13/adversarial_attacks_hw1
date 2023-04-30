@@ -183,4 +183,8 @@ def random_bit_flip(w, bit_index=-1):
     b = binary(w)
     b[bit_index // 8] ^= 1 << (7 - bit_index % 8)
 
+    # print(f'flipped weight - {float32(b)}, bit_index - {bit_index}')
+    # if bit_index == 1:
+    #     import ipdb;ipdb.set_trace()
+
     return float32(b), bit_index
